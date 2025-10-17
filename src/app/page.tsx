@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface Ingredient {
   id: number;
@@ -98,94 +97,71 @@ export default function Home() {
   const profit = revenue - totalCost;
   const profitMargin = revenue > 0 ? ((profit / revenue) * 100) : 0;
 
-  const handleExportToExcel = () => {
-    // Prepare summary data
-    const summaryData = [
-      ['KALKULATOR BIAYA PRODUKSI'],
-      ['Tanggal Export:', new Date().toLocaleDateString('id-ID')],
-      [''],
-      ['RINGKASAN HASIL'],
-      ['Total Item Diproduksi', totalItems || '0'],
-      ['Keuntungan yang Diinginkan (%)', profitPercent || '0'],
-      ['Harga Jual per Item', sellingPrice || '0'],
-      ['Biaya per Item', costPerItem.toFixed(0)],
-      ['Total Biaya', totalCost.toFixed(0)],
-      ['Total Pendapatan', revenue.toFixed(0)],
-      ['Keuntungan Bersih', profit.toFixed(0)],
-      ['Persentase Keuntungan (%)', profitMargin.toFixed(1)],
-      [''],
-      ['DETAIL BAHAN BAKU'],
-      ['Nama Bahan', 'Harga per Unit', 'Jumlah per Item', 'Total Pembelian', 'Satuan', 'Maks Item']
-    ];
+  const handleExportToExcel = async () => {
+    try {
+      // Dynamically import xlsx to avoid build issues
+      const XLSX = await import('xlsx');
+      
+      // Prepare summary data
+      const summaryData = [
+        ['KALKULATOR BIAYA PRODUKSI'],
+        ['Tanggal Export:', new Date().toLocaleDateString('id-ID')],
+        [''],
+        ['RINGKASAN HASIL'],
+        ['Total Item Diproduksi', totalItems || '0'],
+        ['Keuntungan yang Diinginkan (%)', profitPercent || '0'],
+        ['Harga Jual per Item', sellingPrice || '0'],
+        ['Biaya per Item', costPerItem.toFixed(0)],
+        ['Total Biaya', totalCost.toFixed(0)],
+        ['Total Pendapatan', revenue.toFixed(0)],
+        ['Keuntungan Bersih', profit.toFixed(0)],
+        ['Persentase Keuntungan (%)', profitMargin.toFixed(1)],
+        [''],
+        ['DETAIL BAHAN BAKU'],
+        ['Nama Bahan', 'Harga per Unit', 'Jumlah per Item', 'Total Pembelian', 'Satuan', 'Maks Item']
+      ];
 
-    // Prepare ingredients data
-    const ingredientsData = ingredients.map(ing => [
-      ing.name || '',
-      ing.price || '0',
-      ing.quantityPerItem || '0',
-      ing.totalPurchased || '0',
-      ing.unit || '',
-      ing.quantityPerItem && ing.totalPurchased 
-        ? Math.floor(parseFloat(ing.totalPurchased) / parseFloat(ing.quantityPerItem))
-        : 0
-    ]);
+      // Prepare ingredients data
+      const ingredientsData = ingredients.map(ing => [
+        ing.name || '',
+        ing.price || '0',
+        ing.quantityPerItem || '0',
+        ing.totalPurchased || '0',
+        ing.unit || '',
+        ing.quantityPerItem && ing.totalPurchased 
+          ? Math.floor(parseFloat(ing.totalPurchased) / parseFloat(ing.quantityPerItem))
+          : 0
+      ]);
 
-    // Combine all data
-    const allData = [...summaryData, ...ingredientsData];
+      // Combine all data
+      const allData = [...summaryData, ...ingredientsData];
 
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(allData);
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(allData);
 
-    // Set column widths for better readability
-    ws['!cols'] = [
-      { width: 25 }, // Nama Bahan / Labels
-      { width: 15 }, // Harga per Unit
-      { width: 15 }, // Jumlah per Item
-      { width: 15 }, // Total Pembelian
-      { width: 10 }, // Satuan
-      { width: 10 }  // Maks Item
-    ];
+      // Set column widths for better readability
+      ws['!cols'] = [
+        { width: 25 }, // Nama Bahan / Labels
+        { width: 15 }, // Harga per Unit
+        { width: 15 }, // Jumlah per Item
+        { width: 15 }, // Total Pembelian
+        { width: 10 }, // Satuan
+        { width: 10 }  // Maks Item
+      ];
 
-    // Style the header rows
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    for (let R = 0; R <= range.e.r; ++R) {
-      for (let C = 0; C <= range.e.c; ++C) {
-        const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!ws[cell_address]) continue;
-        
-        // Style title row
-        if (R === 0) {
-          ws[cell_address].s = {
-            font: { bold: true, size: 14 },
-            alignment: { horizontal: 'center' }
-          };
-        }
-        // Style section headers
-        else if (R === 3 || R === 13) {
-          ws[cell_address].s = {
-            font: { bold: true, size: 12 },
-            fill: { fgColor: { rgb: 'E0E0E0' } }
-          };
-        }
-        // Style data headers
-        else if (R === 14) {
-          ws[cell_address].s = {
-            font: { bold: true },
-            fill: { fgColor: { rgb: 'F0F0F0' } }
-          };
-        }
-      }
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Kalkulator Produksi');
+
+      // Generate filename with current date
+      const filename = `kalkulator-biaya-produksi-${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      // Write and download file
+      XLSX.writeFile(wb, filename);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Error exporting to Excel. Please try again.');
     }
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Kalkulator Produksi');
-
-    // Generate filename with current date
-    const filename = `kalkulator-biaya-produksi-${new Date().toISOString().split('T')[0]}.xlsx`;
-    
-    // Write and download file
-    XLSX.writeFile(wb, filename);
   };
 
 
