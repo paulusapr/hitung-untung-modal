@@ -188,44 +188,6 @@ export default function Home() {
     XLSX.writeFile(wb, filename);
   };
 
-  const handleExportToCSV = () => {
-    // Create CSV content
-    let csvContent = 'KALKULATOR BIAYA PRODUKSI\n';
-    csvContent += `Tanggal Export,${new Date().toLocaleDateString('id-ID')}\n\n`;
-    
-    // Add summary section
-    csvContent += 'RINGKASAN HASIL\n';
-    csvContent += `Total Item Diproduksi,${totalItems || '0'}\n`;
-    csvContent += `Keuntungan yang Diinginkan (%),${profitPercent || '0'}\n`;
-    csvContent += `Harga Jual per Item,${sellingPrice || '0'}\n`;
-    csvContent += `Biaya per Item,${costPerItem.toFixed(0)}\n`;
-    csvContent += `Total Biaya,${totalCost.toFixed(0)}\n`;
-    csvContent += `Total Pendapatan,${revenue.toFixed(0)}\n`;
-    csvContent += `Keuntungan Bersih,${profit.toFixed(0)}\n`;
-    csvContent += `Persentase Keuntungan (%),${profitMargin.toFixed(1)}\n\n`;
-    
-    // Add ingredients section
-    csvContent += 'DETAIL BAHAN BAKU\n';
-    csvContent += 'Nama Bahan,Harga per Unit,Jumlah per Item,Total Pembelian,Satuan,Maks Item\n';
-    
-    ingredients.forEach(ingredient => {
-      const maxItems = ingredient.quantityPerItem && ingredient.totalPurchased 
-        ? Math.floor(parseFloat(ingredient.totalPurchased) / parseFloat(ingredient.quantityPerItem))
-        : 0;
-      csvContent += `${ingredient.name || ''},${ingredient.price || '0'},${ingredient.quantityPerItem || '0'},${ingredient.totalPurchased || '0'},${ingredient.unit || ''},${maxItems}\n`;
-    });
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `kalkulator-biaya-produksi-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
@@ -233,26 +195,15 @@ export default function Home() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-end mb-4">
-            <div className="flex gap-3">
-              <button
-                onClick={handleExportToExcel}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export Excel
-              </button>
-              <button
-                onClick={handleExportToCSV}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export CSV
-              </button>
-            </div>
+            <button
+              onClick={handleExportToExcel}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export Excel
+            </button>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">
             Kalkulator Biaya Produksi
