@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 
 interface Ingredient {
   id: number;
@@ -97,11 +98,162 @@ export default function Home() {
   const profit = revenue - totalCost;
   const profitMargin = revenue > 0 ? ((profit / revenue) * 100) : 0;
 
+  const handleExportToExcel = () => {
+    // Prepare summary data
+    const summaryData = [
+      ['KALKULATOR BIAYA PRODUKSI'],
+      ['Tanggal Export:', new Date().toLocaleDateString('id-ID')],
+      [''],
+      ['RINGKASAN HASIL'],
+      ['Total Item Diproduksi', totalItems || '0'],
+      ['Keuntungan yang Diinginkan (%)', profitPercent || '0'],
+      ['Harga Jual per Item', sellingPrice || '0'],
+      ['Biaya per Item', costPerItem.toFixed(0)],
+      ['Total Biaya', totalCost.toFixed(0)],
+      ['Total Pendapatan', revenue.toFixed(0)],
+      ['Keuntungan Bersih', profit.toFixed(0)],
+      ['Persentase Keuntungan (%)', profitMargin.toFixed(1)],
+      [''],
+      ['DETAIL BAHAN BAKU'],
+      ['Nama Bahan', 'Harga per Unit', 'Jumlah per Item', 'Total Pembelian', 'Satuan', 'Maks Item']
+    ];
+
+    // Prepare ingredients data
+    const ingredientsData = ingredients.map(ing => [
+      ing.name || '',
+      ing.price || '0',
+      ing.quantityPerItem || '0',
+      ing.totalPurchased || '0',
+      ing.unit || '',
+      ing.quantityPerItem && ing.totalPurchased 
+        ? Math.floor(parseFloat(ing.totalPurchased) / parseFloat(ing.quantityPerItem))
+        : 0
+    ]);
+
+    // Combine all data
+    const allData = [...summaryData, ...ingredientsData];
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(allData);
+
+    // Set column widths for better readability
+    ws['!cols'] = [
+      { width: 25 }, // Nama Bahan / Labels
+      { width: 15 }, // Harga per Unit
+      { width: 15 }, // Jumlah per Item
+      { width: 15 }, // Total Pembelian
+      { width: 10 }, // Satuan
+      { width: 10 }  // Maks Item
+    ];
+
+    // Style the header rows
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    for (let R = 0; R <= range.e.r; ++R) {
+      for (let C = 0; C <= range.e.c; ++C) {
+        const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cell_address]) continue;
+        
+        // Style title row
+        if (R === 0) {
+          ws[cell_address].s = {
+            font: { bold: true, size: 14 },
+            alignment: { horizontal: 'center' }
+          };
+        }
+        // Style section headers
+        else if (R === 3 || R === 13) {
+          ws[cell_address].s = {
+            font: { bold: true, size: 12 },
+            fill: { fgColor: { rgb: 'E0E0E0' } }
+          };
+        }
+        // Style data headers
+        else if (R === 14) {
+          ws[cell_address].s = {
+            font: { bold: true },
+            fill: { fgColor: { rgb: 'F0F0F0' } }
+          };
+        }
+      }
+    }
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Kalkulator Produksi');
+
+    // Generate filename with current date
+    const filename = `kalkulator-biaya-produksi-${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Write and download file
+    XLSX.writeFile(wb, filename);
+  };
+
+  const handleExportToCSV = () => {
+    // Create CSV content
+    let csvContent = 'KALKULATOR BIAYA PRODUKSI\n';
+    csvContent += `Tanggal Export,${new Date().toLocaleDateString('id-ID')}\n\n`;
+    
+    // Add summary section
+    csvContent += 'RINGKASAN HASIL\n';
+    csvContent += `Total Item Diproduksi,${totalItems || '0'}\n`;
+    csvContent += `Keuntungan yang Diinginkan (%),${profitPercent || '0'}\n`;
+    csvContent += `Harga Jual per Item,${sellingPrice || '0'}\n`;
+    csvContent += `Biaya per Item,${costPerItem.toFixed(0)}\n`;
+    csvContent += `Total Biaya,${totalCost.toFixed(0)}\n`;
+    csvContent += `Total Pendapatan,${revenue.toFixed(0)}\n`;
+    csvContent += `Keuntungan Bersih,${profit.toFixed(0)}\n`;
+    csvContent += `Persentase Keuntungan (%),${profitMargin.toFixed(1)}\n\n`;
+    
+    // Add ingredients section
+    csvContent += 'DETAIL BAHAN BAKU\n';
+    csvContent += 'Nama Bahan,Harga per Unit,Jumlah per Item,Total Pembelian,Satuan,Maks Item\n';
+    
+    ingredients.forEach(ingredient => {
+      const maxItems = ingredient.quantityPerItem && ingredient.totalPurchased 
+        ? Math.floor(parseFloat(ingredient.totalPurchased) / parseFloat(ingredient.quantityPerItem))
+        : 0;
+      csvContent += `${ingredient.name || ''},${ingredient.price || '0'},${ingredient.quantityPerItem || '0'},${ingredient.totalPurchased || '0'},${ingredient.unit || ''},${maxItems}\n`;
+    });
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `kalkulator-biaya-produksi-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
+          <div className="flex justify-end mb-4">
+            <div className="flex gap-3">
+              <button
+                onClick={handleExportToExcel}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export Excel
+              </button>
+              <button
+                onClick={handleExportToCSV}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export CSV
+              </button>
+            </div>
+          </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">
             Kalkulator Biaya Produksi
           </h1>
